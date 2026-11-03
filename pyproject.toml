@@ -7,13 +7,13 @@ build-backend = "setuptools.build_meta"
 name = "house-protocol"
 version = "0.1.0"
 description = "Program to monitor world/national/stock events"
-readme = "README.txt"
+readme = "README.md"
 requires-python = ">=3.12"
-dependencies = {
+dependencies = [
     "apscheduler>=3.10,<4"
-}
+]
 
-[project.optional-dependiencies]
+[project.optional-dependencies]
 dev = [
     "pytest>=8",
     "ruff>=0.5"
@@ -26,7 +26,7 @@ where = ["src"]
 line-length = 100
 target-version = "py312"
 
-[tools.ruff.init]
+[tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
