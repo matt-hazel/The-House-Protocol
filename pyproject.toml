@@ -10,7 +10,10 @@ description = "Program to monitor world/national/stock events"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "apscheduler>=3.10,<4"
+    "apscheduler>=3.10,<4",
+    "requests>=2.31",
+    "pandas>=2.2",
+    "pyarrow>=15.0.0"
 ]
 
 [project.optional-dependencies]
