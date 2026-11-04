@@ -6,17 +6,17 @@ EQUITY_SYMBOLS: list[str] = [
     "QQQ",
     "IWM",
     "TLT",
-    "GLD"
+    "GLD",
     # sectors
     "XLE",
     "XLF",
     "XLV",
     "XLI",
-    "XLP"
+    "XLP",
     # agriculture
     "DBA",
     "DE",
-    "ADM"
+    "ADM",
     # large caps
     "AAPL",
     "MSFT",
@@ -24,7 +24,7 @@ EQUITY_SYMBOLS: list[str] = [
     "NVDA",
     "JPM",
     "XOM",
-    "CAT"
+    "CAT",
     # nuclear
     "URA",
     "URNM",
