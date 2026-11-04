@@ -10,6 +10,7 @@ class Settings:
     fred_api_key: str | None
     discord_bot_token: str | None
     discord_user_id: str | None
+    tiingo_api_key: str | None
 
 
 def load_settings() -> Settings:
@@ -23,4 +24,5 @@ def load_settings() -> Settings:
         fred_api_key=os.getenv("FRED_API_KEY"),
         discord_bot_token=os.getenv("DISCORD_BOT_TOKEN"),
         discord_user_id=user_id,
+        tiingo_api_key=os.getenv("TIINGO_API_KEY"),
     )
