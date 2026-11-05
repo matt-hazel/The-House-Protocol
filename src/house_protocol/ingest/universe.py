@@ -34,3 +34,12 @@ EQUITY_SYMBOLS: list[str] = [
     "BWXT",
     "SMR",
 ]
+
+
+FRED_SERIES: list[str] = [
+    "VIXCLS",
+    "T10Y2Y",
+    "BAMLH0A0HYM2",
+    "DGS10",
+    "DFF",
+]

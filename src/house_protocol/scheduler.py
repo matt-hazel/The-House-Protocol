@@ -7,8 +7,9 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from house_protocol.config import load_settings
+from house_protocol.ingest.fred import ingest_macro
 from house_protocol.ingest.tiingo import ingest_prices
-from house_protocol.ingest.universe import EQUITY_SYMBOLS
+from house_protocol.ingest.universe import EQUITY_SYMBOLS, FRED_SERIES
 from house_protocol.storage.parquet import read_table
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,18 @@ def update_prices() -> None:
     ingest_prices(EQUITY_SYMBOLS, settings.tiingo_api_key, path, start=start)
 
 
+def update_macro() -> None:
+    settings = load_settings()
+    if not settings.fred_api_key:
+        logger.warning("FRED_API_KEY not set, skipping update")
+        return
+
+    start = (datetime.now(NY).date() - timedelta(days=30)).isoformat()
+    ingest_macro(
+        FRED_SERIES, settings.fred_api_key, settings.data_dir / "macro.parquet", start=start
+    )
+
+
 def main() -> None:
     settings = load_settings()
     logging.basicConfig(
@@ -70,7 +83,7 @@ def main() -> None:
 
     scheduler = BlockingScheduler(timezone="UTC")
     scheduler.add_job(
-        update_prices,
+        update_macro,
         CronTrigger(
             day_of_week="mon-fri",
             hour="18-23",
