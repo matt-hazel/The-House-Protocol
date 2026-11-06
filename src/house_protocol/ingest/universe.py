@@ -42,4 +42,5 @@ FRED_SERIES: list[str] = [
     "BAMLH0A0HYM2",
     "DGS10",
     "DFF",
+    "BAA10Y",
 ]
