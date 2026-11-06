@@ -6,6 +6,7 @@ import holidays
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from house_protocol.alerts.runner import run_alerts
 from house_protocol.config import load_settings
 from house_protocol.ingest.fred import ingest_macro
 from house_protocol.ingest.tiingo import ingest_prices
@@ -72,6 +73,13 @@ def update_macro() -> None:
     )
 
 
+def check_alerts() -> None:
+    run_alerts(load_settings(), datetime.now(NY).date())
+
+
+# THIS IS MAIN
+
+
 def main() -> None:
     settings = load_settings()
     logging.basicConfig(
@@ -79,18 +87,18 @@ def main() -> None:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    logger.info("starting scheduler, data_dir%s", settings.data_dir)
+    logger.info("starting scheduler, data_dir=%s", settings.data_dir)
 
     scheduler = BlockingScheduler(timezone="UTC")
+
+    evening = {"day_of_week": "mon-fri", "hour": "18-23", "timezone": NY}
+
+    scheduler.add_job(update_prices, CronTrigger(minute="0,30", **evening))
+    scheduler.add_job(check_alerts, CronTrigger(minute="10,40", **evening))
     scheduler.add_job(
-        update_macro,
-        CronTrigger(
-            day_of_week="mon-fri",
-            hour="18-23",
-            minute="0,30",
-            timezone=NY,
-        ),
+        update_macro, CronTrigger(day_of_week="mon-fri", hour="9,15", minute=0, timezone=NY)
     )
+
     scheduler.start()
 
 

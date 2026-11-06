@@ -59,24 +59,24 @@ def _tier(value: float, levels: tuple[float, float]) -> str | None:
     return None
 
 
-def _macro_series(macro: pd.DataFrame, series_id: str) -> pd.Series:
+def macro_series(macro: pd.DataFrame, series_id: str) -> pd.Series:
     rows = macro.loc[macro["series_id"] == series_id]
 
     return rows.set_index("date")["value"].sort_index().dropna()
 
 
-def _price_series(price: pd.DataFrame, symbol: str) -> pd.Series:
+def price_series(price: pd.DataFrame, symbol: str) -> pd.Series:
     rows = price.loc[price["symbol"] == symbol]
 
     return rows.set_index("date")["adj_close"].sort_index().dropna()
 
 
-def _returns(prices: pd.Series) -> pd.Series:
+def returns(prices: pd.Series) -> pd.Series:
     return prices / prices.shift(1) - 1
 
 
 def check_vix(macro: pd.DataFrame) -> list[Signal]:
-    series = _macro_series(macro, "VIXCLS")
+    series = macro_series(macro, "VIXCLS")
     if series.empty:
         return []
 
@@ -89,7 +89,7 @@ def check_vix(macro: pd.DataFrame) -> list[Signal]:
 
 
 def check_yield_curve(macro: pd.DataFrame) -> list[Signal]:
-    series = _macro_series(macro, "T10Y2Y")
+    series = macro_series(macro, "T10Y2Y")
 
     if series.empty or series.iloc[-1] >= 0:
         return []
@@ -102,7 +102,7 @@ def check_yield_curve(macro: pd.DataFrame) -> list[Signal]:
 
 
 def check_credit(macro: pd.DataFrame) -> list[Signal]:
-    series = _macro_series(macro, "BAA10Y")
+    series = macro_series(macro, "BAA10Y")
 
     z = zscore_latest(series, CREDIT_WINDOW)
 
@@ -120,9 +120,9 @@ def check_credit(macro: pd.DataFrame) -> list[Signal]:
 
 
 def check_market_move(prices: pd.DataFrame) -> list[Signal]:
-    returns = _returns(_price_series(prices, "SPY"))
+    rets = returns(price_series(prices, "SPY"))
 
-    z = zscore_latest(returns, RETURN_WINDOW)
+    z = zscore_latest(rets, RETURN_WINDOW)
 
     if z is None:
         return []
@@ -132,13 +132,13 @@ def check_market_move(prices: pd.DataFrame) -> list[Signal]:
     if tier is None:
         return []
 
-    message = f"SPY moved {returns.iloc[-1]:+.1%} today (z={z:+.1f})"
+    message = f"SPY moved {rets.iloc[-1]:+.1%} today (z={z:+.1f})"
 
-    return [Signal("market_move", tier, message, z, returns.index[-1])]
+    return [Signal("market_move", tier, message, z, rets.index[-1])]
 
 
 def check_drawdown(prices: pd.DataFrame) -> list[Signal]:
-    series = _price_series(prices, "SPY")
+    series = price_series(prices, "SPY")
 
     if series.empty:
         return []
@@ -159,8 +159,8 @@ def check_ticker_shocks(prices: pd.DataFrame) -> list[Signal]:
     signals = []
 
     for symbol in sorted(prices["symbol"].unique()):
-        returns = _returns(_price_series(prices, symbol))
-        z = zscore_latest(returns, RETURN_WINDOW)
+        rets = returns(price_series(prices, symbol))
+        z = zscore_latest(rets, RETURN_WINDOW)
 
         if z is None:
             continue
@@ -170,9 +170,9 @@ def check_ticker_shocks(prices: pd.DataFrame) -> list[Signal]:
         if tier is None:
             continue
 
-        message = f"{symbol} moved {returns.iloc[-1]:+.1%} today (z={z:+.1f})"
+        message = f"{symbol} moved {rets.iloc[-1]:+.1%} today (z={z:+.1f})"
 
-        signals.append(Signal(f"ticker_shock:{symbol}", tier, message, z, returns.index[-1]))
+        signals.append(Signal(f"ticker_shock:{symbol}", tier, message, z, rets.index[-1]))
 
     return signals
 
