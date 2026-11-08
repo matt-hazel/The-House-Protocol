@@ -7,6 +7,9 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from house_protocol.alerts.runner import run_alerts
+from house_protocol.briefing.headlines import ingest_headlines
+from house_protocol.briefing.morning import run_briefing
+from house_protocol.briefing.sources import FEEDS
 from house_protocol.config import load_settings
 from house_protocol.ingest.fred import ingest_macro
 from house_protocol.ingest.tiingo import ingest_prices
@@ -77,6 +80,15 @@ def check_alerts() -> None:
     run_alerts(load_settings(), datetime.now(NY).date())
 
 
+def update_headlines() -> None:
+    settings = load_settings()
+    ingest_headlines(FEEDS, settings.data_dir / "headlines.parquet")
+
+
+def send_briefing() -> None:
+    run_briefing(load_settings(), datetime.now(NY))
+
+
 # THIS IS MAIN
 
 
@@ -97,6 +109,10 @@ def main() -> None:
     scheduler.add_job(check_alerts, CronTrigger(minute="10,40", **evening))
     scheduler.add_job(
         update_macro, CronTrigger(day_of_week="mon-fri", hour="9,15", minute=0, timezone=NY)
+    )
+    scheduler.add_job(update_headlines, CronTrigger(hour="*/2", minute=5, timezone=NY))
+    scheduler.add_job(
+        send_briefing, CronTrigger(hour=7, minute=30, timezone=NY), misfire_grace_time=3600
     )
 
     scheduler.start()
