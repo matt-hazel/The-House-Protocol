@@ -21,6 +21,9 @@ def load_settings() -> Settings:
 
     user_id = os.getenv("DISCORD_USER_ID")
 
+    lat = os.getenv("WEATHER_LAT")
+    lon = os.getenv("WEATHER_LON")
+
     return Settings(
         data_dir=Path(os.getenv("DATA_DIR", "data")),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
@@ -28,6 +31,7 @@ def load_settings() -> Settings:
         discord_bot_token=os.getenv("DISCORD_BOT_TOKEN"),
         discord_user_id=user_id,
         tiingo_api_key=os.getenv("TIINGO_API_KEY"),
-        lat = os.getenv("WEATHER_LAT"),
-        lon = os.getenv("WEATHER_LON"),
+        weather_lat=float(lat) if lat else None,
+        weather_lon=float(lon) if lon else None,
+        weather_place=os.getenv("WEATHER_PLACE", "Home"),
     )
