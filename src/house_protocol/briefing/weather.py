@@ -78,7 +78,7 @@ def fetch_forecast(lat: float, lon: float, session: requests.Session) -> dict:
 
 def _day_line(label: str, daily: dict, i: int) -> str:
     return (
-        f"{label}: {daily['temperature_2m_max'][i]:.0f}°/{daily['temperature_2m_min'][i]:.0f}°F,"
+        f"{label}: {daily['temperature_2m_max'][i]:.0f}°/{daily['temperature_2m_min'][i]:.0f}°F, "
         f"{describe(daily['weather_code'][i])}, "
         f"{daily['precipitation_probability_max'][i]}% chance of precip, "
         f"wind up to {daily['wind_speed_10m_max'][i]:.0f} mph"
