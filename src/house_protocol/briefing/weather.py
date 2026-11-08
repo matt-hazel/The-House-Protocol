@@ -55,7 +55,7 @@ def fetch_forecast(lat: float, lon: float, session: requests.Session) -> dict:
         "current": "temperature_2m,apparent_temperature,weather_code,wind_speed_10m",
         "daily": (
             "weather_code,temperature_2m_max,temperature_2m_min,"
-            "precipitation_probability_max,wind_speed,10m_max"
+            "precipitation_probability_max,wind_speed_10m_max"
         ),
         "temperature_unit": "fahrenheit",
         "wind_speed_unit": "mph",
@@ -71,7 +71,7 @@ def fetch_forecast(lat: float, lon: float, session: requests.Session) -> dict:
         # request url contains home coords
 
         status = getattr(exc.response, "status_code", None)
-        raise RuntimeError(f"Open_Meteo request failed, status={status}") from None
+        raise RuntimeError(f"Open-Meteo request failed, status={status}") from None
 
     return resp.json()
 
