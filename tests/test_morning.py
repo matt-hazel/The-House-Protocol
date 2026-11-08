@@ -79,7 +79,7 @@ def test_build_briefing_survives_weather_failure(tmp_path, monkeypatch):
     monkeypatch.setattr(morning, "get_weather_text", boom)
     df = frame([hl("A", "story", 1)])
 
-    text = morning.build_briefing(make_settings(tmp_path), df, NOW)
+    text = morning.build_briefing(make_settings(tmp_path), df, NOW, feeds=FEEDS_T)
 
     assert "[story]" in text
     assert "WEATHER" not in text
