@@ -23,6 +23,7 @@ KEYS = ["source", "url"]
 COLUMNS = ["source", "url", "title", "summary", "published"]
 SUMMARY_LIMIT = 300
 TAG = re.compile(r"<[^>]+>")
+PUBLISHER_SUFFIX = re.compile(r"\s+-\s+AP News$")
 
 
 def clean_text(text: str, limit: int | None = None) -> str:
@@ -51,7 +52,7 @@ def parse_feed(content: bytes, source: str) -> list[dict]:
             {
                 "source": source,
                 "url": link,
-                "title": clean_text(title),
+                "title": PUBLISHER_SUFFIX.sub("", clean_text(title)),
                 "summary": clean_text(entry.get("summary", ""), SUMMARY_LIMIT),
                 "published": published,
             }

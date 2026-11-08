@@ -23,7 +23,7 @@ FEEDS = [
     ),
     Feed(
         "ABC News",
-        "https://abcnews.com/abcnews/interantionalheadlines",
+        "https://abcnews.com/abcnews/internationalheadlines",
         "center-left",
         "us",
     ),
