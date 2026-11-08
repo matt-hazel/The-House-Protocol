@@ -11,6 +11,9 @@ class Settings:
     discord_bot_token: str | None
     discord_user_id: str | None
     tiingo_api_key: str | None
+    weather_lat: float | None = None
+    weather_lon: float | None = None
+    weather_place: str = "Home"
 
 
 def load_settings() -> Settings:
@@ -25,4 +28,6 @@ def load_settings() -> Settings:
         discord_bot_token=os.getenv("DISCORD_BOT_TOKEN"),
         discord_user_id=user_id,
         tiingo_api_key=os.getenv("TIINGO_API_KEY"),
+        lat = os.getenv("WEATHER_LAT"),
+        lon = os.getenv("WEATHER_LON"),
     )
