@@ -81,7 +81,6 @@ def test_empty_frame():
     assert "cluster" in out.columns
 
 
-
 def test_one_outlet_with_two_headlines_counts_once():
     df = frame(
         [

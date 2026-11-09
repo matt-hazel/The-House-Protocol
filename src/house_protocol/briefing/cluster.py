@@ -94,19 +94,16 @@ def find_clusters(headlines: pd.DataFrame, threshold: float = THRESHOLD) -> pd.D
 
 def _independent(group: pd.DataFrame) -> int:
     # outlets in a story, merging any that ran the same
-    
+
     names = sorted(set(group["source"]))
     index = {name: i for i, name in enumerate(names)}
     pairs = []
-    
-    
+
     for _, sources in group.groupby("origin")["source"]:
         first, *rest = sorted(set(sources))
         pairs.extend((index[first], index[other]) for other in rest)
-        
-        
-    return len(set(_roots(len(names), pairs)))
 
+    return len(set(_roots(len(names), pairs)))
 
 
 def summarize(clustered: pd.DataFrame, lean_by_source: dict[str, str]) -> list[dict]:
