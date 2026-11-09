@@ -2,10 +2,9 @@
 
 
 import io
-import re
-import pandas as pd
-
 from datetime import date
+
+import pandas as pd
 
 BASE_URL = "https://data.gdeltproject.org/events"
 
@@ -25,7 +24,7 @@ COLUMNS = {
     34: "avg_tone",
     51: "action_country",
     56: "added",
-    57: "source_url"
+    57: "source_url",
 }
 
 TEXT_COLUMNS = [
@@ -63,7 +62,6 @@ DAY_COLUMNS = [
 ]
 
 
-
 def day_url(when: pd.Timestamp) -> str:
     return f"{BASE_URL}/{when:%Y%m%d}.export.CSV.zip"
 
@@ -92,7 +90,7 @@ def aggregate_day(events: pd.DataFrame, day: date) -> pd.DataFrame:
 
     rows = [
         {
-            "day": date,
+            "day": pd.Timestamp(day),
             "region": name,
             "events": len(sub),
             "verbal_conflict": int((sub["quad_class"] == VERBAL_CONFLICT).sum()),
