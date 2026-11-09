@@ -141,3 +141,67 @@ def test_failed_send_leaves_no_marker(tmp_path, monkeypatch):
 
     assert len(attempts) == 1
     assert not (tmp_path / "last_briefing.txt").exists()
+
+
+FEEDS_4 = [
+    Feed("A", "https://a.test/rss", "left", "us"),
+    Feed("B", "https://b.test/rss", "center", "us"),
+    Feed("C", "https://c.test/rss", "right", "us"),
+    Feed("D", "https://d.test/rss", "center", "uk"),
+]
+STORY = {
+    "A": "Egypt trains collide killing seven",
+    "B": "Seven killed as trains collide in Egypt",
+    "C": "Trains collide in Egypt, seven dead",
+}
+
+
+def test_top_stories_lists_coverage_and_blindspots():
+    df = frame([hl(source, title, 1) for source, title in STORY.items()])
+
+    text = morning.format_top_stories(df, NOW, FEEDS_4)
+
+    assert "**Top stories**" in text
+    assert "Covered by A, B, C" in text
+    assert "Not covered: D" in text
+
+
+def test_top_stories_skip_blindspot_line_for_small_stories():
+    df = frame([hl("A", STORY["A"], 1), hl("B", STORY["B"], 1)])
+
+    text = morning.format_top_stories(df, NOW, FEEDS_4)
+
+    assert "Covered by A, B" in text
+    assert "Not covered" not in text
+
+
+def test_top_stories_ignore_copied_text():
+    same = "Tens of thousands march in Amsterdam pressing Dutch government on Gaza"
+    df = frame([hl("A", same, 1), hl("B", same, 1)])
+
+    assert morning.format_top_stories(df, NOW, FEEDS_4) == ""
+
+
+def test_top_stories_ignore_old_headlines():
+    df = frame([hl("A", STORY["A"], 40), hl("B", STORY["B"], 40)])
+
+    assert morning.format_top_stories(df, NOW, FEEDS_4) == ""
+
+
+def test_top_stories_empty_frame():
+    assert morning.format_top_stories(pd.DataFrame(), NOW, FEEDS_4) == ""
+
+
+def test_briefing_puts_top_stories_before_headlines(tmp_path, monkeypatch):
+    monkeypatch.setattr(morning, "get_weather_text", lambda settings, session=None: None)
+    df = frame([hl(source, title, 1) for source, title in STORY.items()])
+
+    text = morning.build_briefing(make_settings(tmp_path), df, NOW, feeds=FEEDS_4)
+
+    assert text.index("**Top stories**") < text.index("**Headlines**")
+
+
+def test_top_stories_ignore_section_page_titles():
+    df = frame([hl("A", STORY["A"], 1), hl("B", "Egypt trains", 1)])
+
+    assert morning.format_top_stories(df, NOW, FEEDS_4) == ""
