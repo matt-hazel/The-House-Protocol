@@ -1,12 +1,22 @@
 # GDELT 2.0 event files
 
-
+import logging
+import time
+import zipfile
+import requests
+from pathlib import Path
+from house_protocol.storage.parquet import read_table, upsert
 import io
 from datetime import date
-
 import pandas as pd
 
+
+logger = logging.getLogger(__name__)
+
+
 BASE_URL = "https://data.gdeltproject.org/events"
+
+
 
 
 COLUMNS = {
@@ -103,3 +113,74 @@ def aggregate_day(events: pd.DataFrame, day: date) -> pd.DataFrame:
     ]
 
     return pd.DataFrame(rows, columns=DAY_COLUMNS)
+
+
+
+
+def fetch_day(day: date, session: requests.Session) -> bytes | None:
+    # download one days file, returns none if it isnt published
+    
+    try:
+        resp = session.get(day_url(day), timeout=120)
+        if resp.status_code == 404:
+            return None
+        
+    except requests.RequestException as exc:
+        status = getattr(exc.response, "status_code", None)
+        raise RuntimeError(f"GDELT {day}: request failed, status={status}") from None
+    
+    
+    return resp.content
+
+
+
+def missing_days(path: Path, start: date, end: date) -> list[date]:
+    # days in [start,end] with no stored data, oldest first
+    table = read_table(path)
+    have = set(table["day"].dt.date) if not table.empty else set()
+    
+    
+    return [d for d in pd.date_range(start, end).date if d not in have]
+
+
+
+def ingest_days(
+    days: list[date],
+    path: Path,
+    pause: float = 0.5,
+    session: requests.Session | None = None,
+) -> int:
+    # fetch aggreg and store each day
+    
+    session = session or requests.Session()
+    stored = 0
+    
+    for day in days:
+        try:
+            content = fetch_day(day, session)
+            
+        except RuntimeError as exc:
+            logger.error("%s", exc)
+            
+            continue
+        
+        
+        if content is None:
+            logger.info("%s: not published yet", day)
+            continue
+        
+        try:
+            events = parse_events(content)
+        except (zipfile.BadZipFile, pd.errors.ParserError, pd.errors.EmptyDataError):
+            logger.exception("%s: could not parse file, skipping", day)
+            
+            continue
+        
+        
+        upsert(aggregate_day(events, day), path, KEYS)
+        stored += 1
+        logger.info("%s: stored %d events", day, len(events))
+        time.sleep(pause)
+        
+        
+    return stored
