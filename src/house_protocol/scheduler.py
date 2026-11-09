@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import holidays
@@ -12,6 +12,7 @@ from house_protocol.briefing.morning import run_briefing
 from house_protocol.briefing.sources import FEEDS
 from house_protocol.config import load_settings
 from house_protocol.ingest.fred import ingest_macro
+from house_protocol.ingest.gdelt import ingest_days, missing_days
 from house_protocol.ingest.tiingo import ingest_prices
 from house_protocol.ingest.universe import EQUITY_SYMBOLS, FRED_SERIES
 from house_protocol.storage.parquet import read_table
@@ -89,6 +90,17 @@ def send_briefing() -> None:
     run_briefing(load_settings(), datetime.now(NY))
 
 
+def update_gdelt() -> None:
+    settings = load_settings()
+    path = settings.data_dir / "gdelt_daily.parquet"
+    end = (datetime.now(UTC) - timedelta(days=1)).date()
+
+    days = missing_days(path, end - timedelta(days=7), end)
+
+    if days:
+        ingest_days(days, path)
+
+
 # THIS IS MAIN
 
 
@@ -114,6 +126,7 @@ def main() -> None:
     scheduler.add_job(
         send_briefing, CronTrigger(hour=7, minute=30, timezone=NY), misfire_grace_time=3600
     )
+    scheduler.add_job(update_gdelt, CronTrigger(hour="3-6", minute=15, timezone=NY))
 
     scheduler.start()
 

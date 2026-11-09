@@ -1,11 +1,13 @@
 import io
 import zipfile
 from datetime import date
-import requests
+
 import pandas as pd
 import pytest
-from house_protocol.storage.parquet import read_table, upsert
+import requests
+
 from house_protocol.ingest import gdelt
+from house_protocol.storage.parquet import read_table, upsert
 
 DAY = date(2026, 1, 1)
 COLUMN_COUNT = 58
@@ -118,6 +120,7 @@ def test_regions_are_wellformed_and_do_not_overlap():
         assert all(len(c) == 2 and c.isupper() for c in codes), name
         assert not (seen & codes), f"{name} overlaps another region"
         seen |= codes
+
 
 class FakeResponse:
     def __init__(self, content=b"", status=200):
