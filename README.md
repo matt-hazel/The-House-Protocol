@@ -1,90 +1,55 @@
 # The House Protocol
 
-A market risk monitor that runs on my homelab. It pulls daily market and macro data, keeps it in Parquet files, and (eventually) scores how stressed things look and sends me a Discord message when something changes.
+A self-hosted early-warning and briefing system that runs on my homelab. It watches markets, the news and the weather, and sends me what matters on Discord. The name and the idea come from Mr. House in Fallout: a system that keeps a model of the world and acts on it.
 
-It's an early-warning tool. It doesn't predict prices and it doesn't give buy or sell signals.
+It doesn't predict prices and it doesn't give trade signals. The goal is to flag changing conditions early, show where news outlets disagree, and eventually publish probabilistic forecasts with a public record of how well they did.
 
-## Status
+## What it does today
 
-Early. Right now it does the boring but necessary part:
-
-- Pulls daily prices for 27 tickers (broad ETFs, sectors, some large caps, agriculture, nuclear) from Tiingo
-- Pulls six macro and stress series from FRED (VIX, yield curve, credit spreads, rates)
-- Stores everything as Parquet, and reruns don't create duplicates
-- Runs on a schedule inside Docker and skips weekends and NYSE holidays
-
-Still to come: Discord alerts, GDELT news data, regime detection, a drawdown risk model, and a Grafana dashboard.
+- **Market data:** daily prices for 27 tickers (Tiingo) and six macro and credit-stress series (FRED), stored as Parquet with idempotent upserts.
+- **Alerts:** watch and alert tiers for VIX, yield curve, credit spreads, drawdown and unusual price moves. Z-score baselines exclude the day being scored. Cooldowns and de-duplication stop repeat pings, and a signal is only recorded as sent once Discord confirms it.
+- **Evening market digest** on Discord after the day's data lands.
+- **Morning briefing** at 7:30 am: local weather, plus headlines from eight outlets across the US and abroad, each labelled with its political lean so the framing is visible.
+- NYSE-calendar-aware scheduling, running in Docker Compose.
+- Automated tests and linting (pytest, ruff).
 
 ## How it works
 
 ```
-Tiingo / FRED  ->  ingest  ->  Parquet files in data/  ->  (features, models, alerts later)
-                      ^
-                 APScheduler
+Tiingo, FRED, RSS feeds, Open-Meteo  ->  Parquet files  ->  rules and analysis  ->  Discord
 ```
 
-The scheduler checks for new daily prices every 30 minutes in the evening (New York time) and stops once the day's data is in. Macro series are checked twice a day on weekdays. Each run refetches a short window and upserts it, so running it twice gives the same result as running it once.
+One scheduler container fetches data on a schedule, analysis modules score it, and results are sent as Discord DMs. Each briefing section has its own fetcher, formatter and tests, so one failing source never blocks the others.
 
-## Setup
+## Design choices
 
-You need Python 3.12 and a free API key from [Tiingo](https://www.tiingo.com) and [FRED](https://fred.stlouisfed.org/docs/api/api_key.html).
+- **Making bias visible instead of removing it.** Headlines are grouped by story across outlets, and syndicated copies (such as AP text run by another outlet) count once. Lean labels are editable config, not facts.
+- **No look-ahead.** Baselines exclude the day being scored, and lagged series are handled explicitly.
+- **Honest forecasting.** Forecasts are logged with a probability and a resolution rule, then scored (Brier score, calibration). Models have to beat simple baselines to count.
+- **Secrets stay in `.env`.** API errors are sanitized so keys and coordinates don't reach the logs.
 
-```
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-pip install -e ".[dev]"
-cp .env.example .env          # then fill in your keys
-```
+## Roadmap
 
-`.env` is gitignored. Don't commit it.
-
-## Getting the history
-
-The daily jobs only fetch recent days, so load the full history once:
-
-```
-python -m house_protocol.ingest.backfill prices
-python -m house_protocol.ingest.backfill macro
-```
-
-The price backfill downloads about 40 MB, so don't run it over and over. The free Tiingo plan has a monthly data cap.
+- [x] Setup, ingestion, alerts, morning briefing
+- [ ] Story clustering: top stories, coverage lines, blindspots (in progress)
+- [ ] Geopolitical tension index from GDELT
+- [ ] Dashboard (Grafana over Tailscale, desktop and phone layouts), with Discord kept for alerts
+- [ ] Forecast ledger with scoring, starting with base-rate forecasts
+- [ ] Regime detection (HMM, GARCH)
+- [ ] Drawdown risk model (LightGBM, walk-forward validation, SHAP)
+- [ ] Optional LLM synthesis of what outlets agree and dispute
 
 ## Running it
 
-With Docker:
+1. Copy `.env.example` to `.env` and fill in: `FRED_API_KEY`, `TIINGO_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_USER_ID`, and optionally `WEATHER_LAT`, `WEATHER_LON`, `WEATHER_PLACE`.
+2. Backfill history once, then start the scheduler:
+   ```
+   python -m house_protocol.ingest.backfill prices
+   python -m house_protocol.ingest.backfill macro
+   docker compose up -d --build
+   ```
+3. Tests: `pip install -e ".[dev]"` then `pytest`.
 
-```
-docker compose up -d --build
-docker compose logs -f
-```
+## Stack
 
-Data is written to `./data`, which is mounted into the container.
-
-## Tests
-
-```
-ruff check .
-pytest
-```
-
-CI runs both on every push. Tests don't touch the network.
-
-## Project layout
-
-```
-src/house_protocol/
-  config.py        settings from environment variables
-  scheduler.py     scheduled jobs
-  ingest/          Tiingo, FRED, backfill, ticker lists
-  storage/         Parquet read and upsert helpers
-tests/
-notebooks/         scratch scripts for checking data
-data/              gitignored
-```
-
-## Notes
-
-- Everything is daily data. No intraday.
-- Paid APIs and LLM calls are off the table on purpose. Anything ML-related runs locally.
-- One of the credit spread series (`BAMLH0A0HYM2`) only has a few years of history on FRED, so `BAA10Y` is used for older stress periods like 2008.
-- When features get built later, macro series will be lagged so nothing uses data that wasn't published yet.
+Python 3.12 · pandas · numpy · pyarrow · APScheduler · Docker Compose · Discord API · pytest · ruff
