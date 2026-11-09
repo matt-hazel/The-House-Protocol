@@ -2,9 +2,9 @@
 
 
 import io
+
 import pandas as pd
 import requests
-
 
 URL = "https://data.gdeltproject.org/events/20260101.export.CSV.zip"
 

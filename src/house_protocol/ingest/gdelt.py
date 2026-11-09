@@ -3,15 +3,15 @@
 
 import io
 import re
-
 import pandas as pd
 
-BASE_URL = "https://data.gdeltproject.org/gdeltv2"
+from datetime import date
+
+BASE_URL = "https://data.gdeltproject.org/events"
 
 
 COLUMNS = {
     0: "event_id",
-    1: "date",
     5: "actor1_code",
     7: "actor1_country",
     15: "actor2_code",
@@ -23,9 +23,9 @@ COLUMNS = {
     31: "num_mentions",
     33: "num_articles",
     34: "avg_tone",
-    53: "action_country",
-    59: "added",
-    60: "source_url",
+    51: "action_country",
+    56: "added",
+    57: "source_url"
 }
 
 TEXT_COLUMNS = [
@@ -62,20 +62,10 @@ DAY_COLUMNS = [
     "tone_sum",
 ]
 
-DAY_NAME = re.compile(r"(\d{14})\.export\.CSV\.zip$")
 
 
 def day_url(when: pd.Timestamp) -> str:
-    return f"{BASE_URL}/{when:%Y%m%d%H%M%S}.export.CSV.zip"
-
-
-def day_time(url: str) -> pd.Timestamp:
-    # day timestamp encoded in a file url
-    match = DAY_NAME.search(url)
-    if not match:
-        raise ValueError(f"not a GDELT event file: {url}")
-
-    return pd.to_datetime(match.group(1), format="%Y%m%d%H%M%S")
+    return f"{BASE_URL}/{when:%Y%m%d}.export.CSV.zip"
 
 
 def parse_events(content: bytes) -> pd.DataFrame:
@@ -92,7 +82,7 @@ def parse_events(content: bytes) -> pd.DataFrame:
     )
 
 
-def aggregate_day(events: pd.DataFrame, when: pd.Timestamp) -> pd.DataFrame:
+def aggregate_day(events: pd.DataFrame, day: date) -> pd.DataFrame:
     # one row per region with counts and sums for this day
 
     scopes = {"global": events}
@@ -102,7 +92,7 @@ def aggregate_day(events: pd.DataFrame, when: pd.Timestamp) -> pd.DataFrame:
 
     rows = [
         {
-            "slice": when,
+            "day": date,
             "region": name,
             "events": len(sub),
             "verbal_conflict": int((sub["quad_class"] == VERBAL_CONFLICT).sum()),
