@@ -1,9 +1,10 @@
 import io
 import zipfile
 from datetime import date
-
+import requests
 import pandas as pd
-
+import pytest
+from house_protocol.storage.parquet import read_table, upsert
 from house_protocol.ingest import gdelt
 
 DAY = date(2026, 1, 1)
@@ -117,3 +118,95 @@ def test_regions_are_wellformed_and_do_not_overlap():
         assert all(len(c) == 2 and c.isupper() for c in codes), name
         assert not (seen & codes), f"{name} overlaps another region"
         seen |= codes
+
+class FakeResponse:
+    def __init__(self, content=b"", status=200):
+        self.content = content
+        self.status_code = status
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError("boom", response=self)
+
+
+class FakeSession:
+    def __init__(self, responses):
+        self.responses = responses
+
+    def get(self, url, timeout=None):
+        return self.responses[url]
+
+
+def day_file(*events):
+    return FakeResponse(make_zip(list(events)))
+
+
+def test_fetch_day_returns_bytes():
+    session = FakeSession({gdelt.day_url(DAY): day_file(event("04", 1, 1.0, 2.0, "US"))})
+
+    assert gdelt.fetch_day(DAY, session) is not None
+
+
+def test_fetch_day_returns_none_when_not_published():
+    session = FakeSession({gdelt.day_url(DAY): FakeResponse(status=404)})
+
+    assert gdelt.fetch_day(DAY, session) is None
+
+
+def test_fetch_day_reports_status_on_server_error():
+    session = FakeSession({gdelt.day_url(DAY): FakeResponse(status=500)})
+
+    with pytest.raises(RuntimeError, match="status=500"):
+        gdelt.fetch_day(DAY, session)
+
+
+def test_ingest_skips_unpublished_and_failed_days(tmp_path):
+    d1, d2, d3 = date(2026, 1, 1), date(2026, 1, 2), date(2026, 1, 3)
+    session = FakeSession(
+        {
+            gdelt.day_url(d1): day_file(event("04", 1, 1.0, 2.0, "US")),
+            gdelt.day_url(d2): FakeResponse(status=404),
+            gdelt.day_url(d3): FakeResponse(status=500),
+        }
+    )
+    path = tmp_path / "gdelt.parquet"
+
+    stored = gdelt.ingest_days([d1, d2, d3], path, pause=0, session=session)
+
+    assert stored == 1
+    assert set(read_table(path)["day"].dt.date) == {d1}
+
+
+def test_ingest_skips_a_corrupt_file(tmp_path):
+    session = FakeSession({gdelt.day_url(DAY): FakeResponse(b"this is not a zip file")})
+    path = tmp_path / "gdelt.parquet"
+
+    assert gdelt.ingest_days([DAY], path, pause=0, session=session) == 0
+    assert not path.exists()
+
+
+def test_ingest_is_idempotent(tmp_path):
+    session = FakeSession({gdelt.day_url(DAY): day_file(event("04", 1, 1.0, 2.0, "US"))})
+    path = tmp_path / "gdelt.parquet"
+
+    gdelt.ingest_days([DAY], path, pause=0, session=session)
+    gdelt.ingest_days([DAY], path, pause=0, session=session)
+
+    assert len(read_table(path)) == 1 + len(gdelt.REGIONS)
+
+
+def test_missing_days_lists_only_gaps(tmp_path):
+    path = tmp_path / "gdelt.parquet"
+    empty = gdelt.parse_events(make_zip([event("04", 1, 1.0, 2.0, "US")]))
+    for day in (date(2026, 1, 1), date(2026, 1, 3)):
+        upsert(gdelt.aggregate_day(empty, day), path, gdelt.KEYS)
+
+    missing = gdelt.missing_days(path, date(2026, 1, 1), date(2026, 1, 4))
+
+    assert missing == [date(2026, 1, 2), date(2026, 1, 4)]
+
+
+def test_missing_days_with_no_file_returns_everything(tmp_path):
+    days = gdelt.missing_days(tmp_path / "nothing.parquet", date(2026, 1, 1), date(2026, 1, 3))
+
+    assert days == [date(2026, 1, 1), date(2026, 1, 2), date(2026, 1, 3)]
