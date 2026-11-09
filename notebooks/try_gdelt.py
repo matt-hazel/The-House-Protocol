@@ -2,10 +2,9 @@
 
 
 import io
+
 import pandas as pd
 import requests
-
-
 
 LASTUPDATE = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
 
@@ -31,8 +30,15 @@ COLUMNS = {
     60: "source_url",
 }
 
-TEXT_COLUMNS = ["actor1_code", "actor1_country", "actor2_code", "actor2_country", 
-                "event_code", "root_code", "action_country"]
+TEXT_COLUMNS = [
+    "actor1_code",
+    "actor1_country",
+    "actor2_code",
+    "actor2_country",
+    "event_code",
+    "root_code",
+    "action_country",
+]
 
 
 lines = requests.get(LASTUPDATE, timeout=30).text.splitlines()

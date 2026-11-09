@@ -3,9 +3,8 @@
 
 import io
 import re
+
 import pandas as pd
-
-
 
 BASE_URL = "https://data.gdeltproject.org/gdeltv2"
 
@@ -29,24 +28,31 @@ COLUMNS = {
     60: "source_url",
 }
 
-TEXT_COLUMNS = ["actor1_code", "actor1_country", "actor2_code", "actor2_country", 
-                "event_code", "root_code", "action_country"]
+TEXT_COLUMNS = [
+    "actor1_code",
+    "actor1_country",
+    "actor2_code",
+    "actor2_country",
+    "event_code",
+    "root_code",
+    "action_country",
+]
 
 
 REGIONS = {
     "russia_ukraine": {"RS", "UP"},
     "china_taiwan": {"CH", "TW"},
-    "middle_east": {"IS","IR","GZ","WE","LE","SY","IZ","YM","SA","JO"},
+    "middle_east": {"IS", "IR", "GZ", "WE", "LE", "SY", "IZ", "YM", "SA", "JO"},
 }
 
-VERBAL_CONFLICT = 3 # quad class, threats demands and protests
-MATERIAL_CONFLICT = 4 # quad class, force assult fighting
-VIOLENT_ROOTS = {"18","19","20"} # assault fight unconventional mass violence
+VERBAL_CONFLICT = 3  # quad class, threats demands and protests
+MATERIAL_CONFLICT = 4  # quad class, force assult fighting
+VIOLENT_ROOTS = {"18", "19", "20"}  # assault fight unconventional mass violence
 
 
-KEYS = ["slice", "region"]
-SLICE_COLUMNS = [
-    "slice",
+KEYS = ["day", "region"]
+DAY_COLUMNS = [
+    "day",
     "region",
     "events",
     "verbal_conflict",
@@ -56,23 +62,25 @@ SLICE_COLUMNS = [
     "tone_sum",
 ]
 
-SLICE_NAME = re.compile(r"(\d{14})\.export\.CSV\.zip$")
+DAY_NAME = re.compile(r"(\d{14})\.export\.CSV\.zip$")
 
 
-def slice_url(when: pd.Timestamp) -> str:
+def day_url(when: pd.Timestamp) -> str:
     return f"{BASE_URL}/{when:%Y%m%d%H%M%S}.export.CSV.zip"
 
 
-def slice_time(url: str) -> pd.Timestamp:
-    # slice timestamp encoded in a file url
-    match = SLICE_NAME.search(url)
+def day_time(url: str) -> pd.Timestamp:
+    # day timestamp encoded in a file url
+    match = DAY_NAME.search(url)
     if not match:
         raise ValueError(f"not a GDELT event file: {url}")
-    
-    
+
+    return pd.to_datetime(match.group(1), format="%Y%m%d%H%M%S")
+
+
 def parse_events(content: bytes) -> pd.DataFrame:
-    #read a zipped, tab sep., headerless event file into named cols
-    
+    # read a zipped, tab sep., headerless event file into named cols
+
     return pd.read_csv(
         io.BytesIO(content),
         compression="zip",
@@ -82,17 +90,16 @@ def parse_events(content: bytes) -> pd.DataFrame:
         names=[COLUMNS[i] for i in sorted(COLUMNS)],
         dtype={name: str for name in TEXT_COLUMNS},
     )
-    
-    
 
-def aggregate_slice(events: pd.DataFrame, when: pd.Timestamp) -> pd.DataFrame:
-    # one row per region with counts and sums for this slice
-    
+
+def aggregate_day(events: pd.DataFrame, when: pd.Timestamp) -> pd.DataFrame:
+    # one row per region with counts and sums for this day
+
     scopes = {"global": events}
-    
+
     for name, codes in REGIONS.items():
         scopes[name] = events.loc[events["action_country"].isin(codes)]
-        
+
     rows = [
         {
             "slice": when,
@@ -106,8 +113,5 @@ def aggregate_slice(events: pd.DataFrame, when: pd.Timestamp) -> pd.DataFrame:
         }
         for name, sub in scopes.items()
     ]
-    
-    
-    return pd.DataFrame(rows, columns=SLICE_COLUMNS)
 
-
+    return pd.DataFrame(rows, columns=DAY_COLUMNS)

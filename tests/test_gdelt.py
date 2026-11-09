@@ -1,16 +1,17 @@
 import io
 import zipfile
+from datetime import date
 
 import pandas as pd
-import pytest
 
 from house_protocol.ingest import gdelt
 
-WHEN = pd.Timestamp("2026-11-09 22:00:00")
+DAY = date(2026, 1, 1)
+COLUMN_COUNT = 58
 
 
 def event(root, quad, goldstein, tone, country, event_id=1):
-    """One event row as {column index: value}."""
+    """One event row as {column index: value}, using the daily-file layout."""
     return {
         0: event_id,
         26: root + "0",
@@ -18,22 +19,22 @@ def event(root, quad, goldstein, tone, country, event_id=1):
         29: quad,
         30: goldstein,
         34: tone,
-        53: country,
-        59: "20261109220000",
+        51: country,
+        56: "20260101",
     }
 
 
 def make_zip(events):
     lines = []
     for values in events:
-        cells = [""] * 61
+        cells = [""] * COLUMN_COUNT
         for index, value in values.items():
             cells[index] = str(value)
         lines.append("\t".join(cells))
 
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr("20261109220000.export.CSV", "\n".join(lines))
+        archive.writestr("20260101.export.CSV", "\n".join(lines))
 
     return buffer.getvalue()
 
@@ -65,7 +66,7 @@ def test_parse_keeps_root_code_leading_zero_and_numeric_types():
 
 
 def test_aggregate_counts_each_region_separately():
-    table = gdelt.aggregate_slice(sample_events(), WHEN)
+    table = gdelt.aggregate_day(sample_events(), DAY)
 
     assert row(table, "global")["events"] == 4
     assert row(table, "russia_ukraine")["events"] == 2
@@ -74,7 +75,7 @@ def test_aggregate_counts_each_region_separately():
 
 
 def test_aggregate_splits_conflict_types():
-    table = gdelt.aggregate_slice(sample_events(), WHEN)
+    table = gdelt.aggregate_day(sample_events(), DAY)
 
     ru = row(table, "russia_ukraine")
     assert ru["verbal_conflict"] == 1
@@ -83,7 +84,7 @@ def test_aggregate_splits_conflict_types():
 
 
 def test_aggregate_sums_goldstein_and_tone():
-    table = gdelt.aggregate_slice(sample_events(), WHEN)
+    table = gdelt.aggregate_day(sample_events(), DAY)
 
     ru = row(table, "russia_ukraine")
     assert ru["goldstein_sum"] == -12.0
@@ -91,31 +92,23 @@ def test_aggregate_sums_goldstein_and_tone():
 
 
 def test_aggregate_quiet_region_still_gets_a_row_of_zeros():
-    table = gdelt.aggregate_slice(sample_events(), WHEN)
+    table = gdelt.aggregate_day(sample_events(), DAY)
 
     ct = row(table, "china_taiwan")
     assert ct["events"] == 0
     assert ct["goldstein_sum"] == 0.0
 
 
-def test_aggregate_has_one_row_per_region_and_slice_time():
-    table = gdelt.aggregate_slice(sample_events(), WHEN)
+def test_aggregate_has_one_row_per_region_and_the_day():
+    table = gdelt.aggregate_day(sample_events(), DAY)
 
-    assert list(table.columns) == gdelt.SLICE_COLUMNS
+    assert list(table.columns) == gdelt.DAY_COLUMNS
     assert set(table["region"]) == {"global", *gdelt.REGIONS}
-    assert (table["slice"] == WHEN).all()
+    assert (table["day"] == pd.Timestamp(DAY)).all()
 
 
-def test_slice_url_and_back():
-    url = gdelt.slice_url(WHEN)
-
-    assert url == "https://data.gdeltproject.org/gdeltv2/20261109220000.export.CSV.zip"
-    assert gdelt.slice_time(url) == WHEN
-
-
-def test_slice_time_rejects_other_files():
-    with pytest.raises(ValueError):
-        gdelt.slice_time("https://data.gdeltproject.org/gdeltv2/lastupdate.txt")
+def test_day_url():
+    assert gdelt.day_url(DAY) == "https://data.gdeltproject.org/events/20260101.export.CSV.zip"
 
 
 def test_regions_are_wellformed_and_do_not_overlap():
