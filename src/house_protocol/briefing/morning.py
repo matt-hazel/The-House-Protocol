@@ -12,6 +12,7 @@ from house_protocol.briefing.sources import FEEDS, Feed
 from house_protocol.briefing.weather import get_weather_text
 from house_protocol.config import Settings
 from house_protocol.storage.parquet import read_table
+from house_protocol.alerts.rules import tension_readings
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,7 @@ def build_briefing(
     now: datetime,
     session: requests.Session | None = None,
     feeds: list[Feed] = FEEDS,
+    gdelt: pd.DataFrame | None = None,
 ) -> str:
 
     # join sections
@@ -89,10 +91,13 @@ def build_briefing(
         logger.exception("weather section failed, skipping")
         weather = None
 
+    world = format_world(gdelt) if gdelt is not None else ""
+
     sections = [
         s
         for s in (
             weather,
+            world,
             format_top_stories(headlines, now, feeds),
             format_headlines(headlines, now, feeds),
         )
@@ -114,6 +119,7 @@ def run_briefing(
         logger.warning("Discord credentials not set")
         return
 
+    gdelt = read_table(settings.data_dir / "gdelt_daily.parquet")
     marker = settings.data_dir / "last_briefing.txt"
 
     today = now.date().isoformat()
@@ -124,7 +130,7 @@ def run_briefing(
         return
 
     headlines = read_table(settings.data_dir / "headlines.parquet")
-    text = build_briefing(settings, headlines, now, session)
+    text = build_briefing(settings, headlines, now, session, gdelt=gdelt)
 
     if not text:
         logger.warning("briefing has no content, skipping")
@@ -139,3 +145,24 @@ def run_briefing(
     else:
         marker.write_text(today)
         logger.info("sent briefing for %s", today)
+
+
+
+def format_world(gdelt: pd.DataFrame) -> str:
+    # daily conflict picture for each watched region
+    
+    readings = tension_readings(gdelt)
+    
+    if not readings:
+        return ""
+    
+    lines = ["**World** (yesterday)"]
+    
+    lines.extend(
+        f"{r.label}: {r.status} ({r.share:.1%} material conflict, typical {r.typical:.1%})"
+        for r in readings
+    )
+    
+    
+    
+    return "\n".join(lines)

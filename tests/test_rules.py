@@ -7,12 +7,12 @@ from house_protocol.alerts.rules import (
     check_credit,
     check_drawdown,
     check_market_move,
+    check_tension,
     check_ticker_shocks,
     check_vix,
     check_yield_curve,
     evaluate,
     zscore_latest,
-    check_tension,
 )
 
 END = "2024-06-28"

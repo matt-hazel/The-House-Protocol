@@ -22,9 +22,9 @@ RETURN_WINDOW = 60
 DRAWDOWN_WINDOW = 252
 
 TENSION_Z_LEVELS = (2.0, 3.0)
-TENSION_WINDOW = 26 # same weekday, so ~6 months
+TENSION_WINDOW = 26  # same weekday, so ~6 months
 TENSION_LABELS = {
-    "russian_ukraine": "Russia/Ukraine",
+    "russia_ukraine": "Russia/Ukraine",
     "china_taiwan": "China/Taiwan",
     "middle_east": "Middle East",
 }
@@ -37,6 +37,21 @@ class Signal:
     message: str
     value: float
     as_of: pd.Timestamp
+
+@dataclass(frozen=True)
+class Tension:
+    region: str
+    label: str
+    share: float
+    typical: float
+    z: float
+    as_of: pd.Timestamp
+    
+    @property
+    def status(self) -> str:
+        tier = _tier(self.z, TENSION_Z_LEVELS)
+        
+        return {ALERT: "high", WATCH: "elevated"}.get(tier, "normal")
 
 
 def zscore_latest(series: pd.Series, window: int) -> float | None:
@@ -185,7 +200,9 @@ def check_ticker_shocks(prices: pd.DataFrame) -> list[Signal]:
     return signals
 
 
-def evaluate(prices: pd.DataFrame, macro: pd.DataFrame, gdelt: pd.DataFrame | None = None) -> list[Signal]:
+def evaluate(
+    prices: pd.DataFrame, macro: pd.DataFrame, gdelt: pd.DataFrame | None = None
+) -> list[Signal]:
     # run every rule, alerts then watches
 
     signals = [
@@ -196,29 +213,31 @@ def evaluate(prices: pd.DataFrame, macro: pd.DataFrame, gdelt: pd.DataFrame | No
         *check_drawdown(prices),
         *check_ticker_shocks(prices),
     ]
-    
+
     if gdelt is not None and not gdelt.empty:
         signals.extend(check_tension(gdelt))
-    
 
     return sorted(signals, key=lambda s: s.tier != ALERT)
 
 
-def check_tension(gdelt: pd.DataFrame) -> list[Signal]:
-    # material conflict share per region
+def tension_readings(gdelt: pd.DataFrame) -> list[Tension]:
+    # current material conflict share per region
     
-    signals = []
+    if gdelt.empty:
+        return []
+    
+    readings = []
     
     for region, label in TENSION_LABELS.items():
         rows = gdelt.loc[(gdelt["region"] == region) & (gdelt["events"] > 0)]
         
+        
         if rows.empty:
             continue
         
-        
         rows = rows.set_index("day").sort_index()
         share = rows["material_conflict"] / rows["events"]
-        same_weekday = share[share.index.dayofweek == share.index[-1].dayofweek]
+        same_weekday = share[share.index.day_of_week == share.index[-1].day_of_week]
         
         
         z = zscore_latest(same_weekday, TENSION_WINDOW)
@@ -226,18 +245,32 @@ def check_tension(gdelt: pd.DataFrame) -> list[Signal]:
         if z is None:
             continue
         
-        tier = _tier(z, TENSION_Z_LEVELS)
+        
+        typical = float(same_weekday.iloc[-TENSION_WINDOW - 1 : -1].mean())
+        readings.append(Tension(region, label, float(share.iloc[-1]), typical, z, share.index[-1]))
+        
+        
+    return readings
+
+
+def check_tension(gdelt: pd.DataFrame) -> list[Signal]:
+    signals = []
+    
+    for r in tension_readings(gdelt):
+        tier = _tier(r.z, TENSION_Z_LEVELS)
         
         if tier is None:
             continue
         
+        
         message = (
-            f"{label}: {share.iloc[-1]:.1f%} of events were material conflict, "
-            f"z={z:+.1f} vs a typical {share.index[-1]:%A}"
+            f"{r.label}: {r.share:.1%} of events were material conflict, "
+            f"z={r.z:+.1f} vs a typical {r.as_of:%A}"
         )
         
         
-        signals.append(Signal(f"tension:{region}", tier, message, z, share.index[-1]))
+        signals.append(Signal(f"tension:{r.region}", tier, message, r.z, r.as_of))
+        
         
         
     return signals

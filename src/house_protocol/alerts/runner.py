@@ -11,7 +11,6 @@ from house_protocol.alerts.state import load_log, record, select_new
 from house_protocol.config import Settings
 from house_protocol.storage.parquet import read_table
 
-
 logger = logging.getLogger(__name__)
 
 

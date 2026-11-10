@@ -31,5 +31,6 @@ def main() -> None:
     stored = ingest_days(days, path)
     logger.info("stored %d days", stored)
 
+
 if __name__ == "__main__":
     main()
