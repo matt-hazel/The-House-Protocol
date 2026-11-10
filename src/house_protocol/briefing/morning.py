@@ -7,12 +7,12 @@ import pandas as pd
 import requests
 
 from house_protocol.alerts.discord import send_dm
+from house_protocol.alerts.rules import tension_readings
 from house_protocol.briefing.cluster import find_clusters, summarize
 from house_protocol.briefing.sources import FEEDS, Feed
 from house_protocol.briefing.weather import get_weather_text
 from house_protocol.config import Settings
 from house_protocol.storage.parquet import read_table
-from house_protocol.alerts.rules import tension_readings
 
 logger = logging.getLogger(__name__)
 
@@ -147,22 +147,19 @@ def run_briefing(
         logger.info("sent briefing for %s", today)
 
 
-
 def format_world(gdelt: pd.DataFrame) -> str:
     # daily conflict picture for each watched region
-    
+
     readings = tension_readings(gdelt)
-    
+
     if not readings:
         return ""
-    
+
     lines = ["**World** (yesterday)"]
-    
+
     lines.extend(
         f"{r.label}: {r.status} ({r.share:.1%} material conflict, typical {r.typical:.1%})"
         for r in readings
     )
-    
-    
-    
+
     return "\n".join(lines)

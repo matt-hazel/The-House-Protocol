@@ -38,6 +38,7 @@ class Signal:
     value: float
     as_of: pd.Timestamp
 
+
 @dataclass(frozen=True)
 class Tension:
     region: str
@@ -46,11 +47,14 @@ class Tension:
     typical: float
     z: float
     as_of: pd.Timestamp
-    
+
     @property
     def status(self) -> str:
         tier = _tier(self.z, TENSION_Z_LEVELS)
-        
+
+        if tier is None and self.z <= -TENSION_Z_LEVELS[0]:
+            return "quieter than usual"
+
         return {ALERT: "high", WATCH: "elevated"}.get(tier, "normal")
 
 
@@ -222,55 +226,47 @@ def evaluate(
 
 def tension_readings(gdelt: pd.DataFrame) -> list[Tension]:
     # current material conflict share per region
-    
+
     if gdelt.empty:
         return []
-    
+
     readings = []
-    
+
     for region, label in TENSION_LABELS.items():
         rows = gdelt.loc[(gdelt["region"] == region) & (gdelt["events"] > 0)]
-        
-        
+
         if rows.empty:
             continue
-        
+
         rows = rows.set_index("day").sort_index()
         share = rows["material_conflict"] / rows["events"]
         same_weekday = share[share.index.day_of_week == share.index[-1].day_of_week]
-        
-        
+
         z = zscore_latest(same_weekday, TENSION_WINDOW)
-        
+
         if z is None:
             continue
-        
-        
+
         typical = float(same_weekday.iloc[-TENSION_WINDOW - 1 : -1].mean())
         readings.append(Tension(region, label, float(share.iloc[-1]), typical, z, share.index[-1]))
-        
-        
+
     return readings
 
 
 def check_tension(gdelt: pd.DataFrame) -> list[Signal]:
     signals = []
-    
+
     for r in tension_readings(gdelt):
         tier = _tier(r.z, TENSION_Z_LEVELS)
-        
+
         if tier is None:
             continue
-        
-        
+
         message = (
             f"{r.label}: {r.share:.1%} of events were material conflict, "
             f"z={r.z:+.1f} vs a typical {r.as_of:%A}"
         )
-        
-        
+
         signals.append(Signal(f"tension:{r.region}", tier, message, r.z, r.as_of))
-        
-        
-        
+
     return signals
