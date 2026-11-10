@@ -12,6 +12,7 @@ from house_protocol.alerts.rules import (
     check_yield_curve,
     evaluate,
     zscore_latest,
+    check_tension,
 )
 
 END = "2024-06-28"
@@ -139,3 +140,41 @@ def test_evaluate_puts_alerts_before_watches():
 
     assert tiers[0] == ALERT
     assert WATCH in tiers
+
+
+def gdelt_frame(shares, region="russia_ukraine"):
+    days = pd.date_range(end="2026-11-08", periods=len(shares))
+    return pd.DataFrame(
+        {
+            "day": days,
+            "region": region,
+            "events": 1000,
+            "material_conflict": [round(s * 1000) for s in shares],
+        }
+    )
+
+
+def calm_shares(n=200):
+    return [0.10 + 0.005 * (i % 4) for i in range(n)]
+
+
+def test_tension_spike_is_alert():
+    gdelt = gdelt_frame(calm_shares()[:-1] + [0.30])
+
+    [signal] = check_tension(gdelt)
+
+    assert signal.tier == "alert"
+    assert signal.rule_id == "tension:russia_ukraine"
+    assert "Russia/Ukraine" in signal.message
+
+
+def test_tension_normal_day_is_quiet():
+    assert check_tension(gdelt_frame(calm_shares())) == []
+
+
+def test_tension_needs_enough_history():
+    assert check_tension(gdelt_frame(calm_shares(100)[:-1] + [0.30])) == []
+
+
+def test_tension_ignores_the_global_row():
+    assert check_tension(gdelt_frame(calm_shares()[:-1] + [0.30], region="global")) == []

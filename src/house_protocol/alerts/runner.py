@@ -11,6 +11,7 @@ from house_protocol.alerts.state import load_log, record, select_new
 from house_protocol.config import Settings
 from house_protocol.storage.parquet import read_table
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +29,7 @@ def run_alerts(settings: Settings, today: date, now: datetime | None = None) -> 
 
     prices = read_table(settings.data_dir / "prices.parquet")
     macro = read_table(settings.data_dir / "macro.parquet")
+    gdelt = read_table(settings.data_dir / "gdelt_daily.parquet")
 
     if prices.empty or macro.empty:
         logger.warning("no data yet, skipping alerts")
@@ -43,7 +45,7 @@ def run_alerts(settings: Settings, today: date, now: datetime | None = None) -> 
 
     now = now or datetime.now(UTC).replace(tzinfo=None)
     token, user_id = settings.discord_bot_token, settings.discord_user_id
-    signals = evaluate(prices, macro)
+    signals = evaluate(prices, macro, gdelt)
 
     log_path = settings.data_dir / "alert_log.parquet"
     new = select_new(signals, load_log(log_path), now)

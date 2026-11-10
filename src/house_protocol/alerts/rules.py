@@ -21,6 +21,14 @@ CREDIT_WINDOW = 252
 RETURN_WINDOW = 60
 DRAWDOWN_WINDOW = 252
 
+TENSION_Z_LEVELS = (2.0, 3.0)
+TENSION_WINDOW = 26 # same weekday, so ~6 months
+TENSION_LABELS = {
+    "russian_ukraine": "Russia/Ukraine",
+    "china_taiwan": "China/Taiwan",
+    "middle_east": "Middle East",
+}
+
 
 @dataclass(frozen=True)
 class Signal:
@@ -177,7 +185,7 @@ def check_ticker_shocks(prices: pd.DataFrame) -> list[Signal]:
     return signals
 
 
-def evaluate(prices: pd.DataFrame, macro: pd.DataFrame) -> list[Signal]:
+def evaluate(prices: pd.DataFrame, macro: pd.DataFrame, gdelt: pd.DataFrame | None = None) -> list[Signal]:
     # run every rule, alerts then watches
 
     signals = [
@@ -188,5 +196,48 @@ def evaluate(prices: pd.DataFrame, macro: pd.DataFrame) -> list[Signal]:
         *check_drawdown(prices),
         *check_ticker_shocks(prices),
     ]
+    
+    if gdelt is not None and not gdelt.empty:
+        signals.extend(check_tension(gdelt))
+    
 
     return sorted(signals, key=lambda s: s.tier != ALERT)
+
+
+def check_tension(gdelt: pd.DataFrame) -> list[Signal]:
+    # material conflict share per region
+    
+    signals = []
+    
+    for region, label in TENSION_LABELS.items():
+        rows = gdelt.loc[(gdelt["region"] == region) & (gdelt["events"] > 0)]
+        
+        if rows.empty:
+            continue
+        
+        
+        rows = rows.set_index("day").sort_index()
+        share = rows["material_conflict"] / rows["events"]
+        same_weekday = share[share.index.dayofweek == share.index[-1].dayofweek]
+        
+        
+        z = zscore_latest(same_weekday, TENSION_WINDOW)
+        
+        if z is None:
+            continue
+        
+        tier = _tier(z, TENSION_Z_LEVELS)
+        
+        if tier is None:
+            continue
+        
+        message = (
+            f"{label}: {share.iloc[-1]:.1f%} of events were material conflict, "
+            f"z={z:+.1f} vs a typical {share.index[-1]:%A}"
+        )
+        
+        
+        signals.append(Signal(f"tension:{region}", tier, message, z, share.index[-1]))
+        
+        
+    return signals

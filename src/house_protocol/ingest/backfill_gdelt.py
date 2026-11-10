@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_arguement("--years", type=float, default=3.0, help="how far back to fetch")
+    parser.add_argument("--years", type=float, default=3.0, help="how far back to fetch")
     args = parser.parse_args()
 
     settings = load_settings()
@@ -31,5 +31,5 @@ def main() -> None:
     stored = ingest_days(days, path)
     logger.info("stored %d days", stored)
 
-    if __name__ == "__name__":
-        main()
+if __name__ == "__main__":
+    main()
