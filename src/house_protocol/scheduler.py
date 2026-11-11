@@ -15,8 +15,8 @@ from house_protocol.ingest.fred import ingest_macro
 from house_protocol.ingest.gdelt import ingest_days, missing_days
 from house_protocol.ingest.tiingo import ingest_prices
 from house_protocol.ingest.universe import EQUITY_SYMBOLS, FRED_SERIES
-from house_protocol.storage.parquet import read_table
 from house_protocol.storage.dashboard import sync_dashboard
+from house_protocol.storage.parquet import read_table
 from house_protocol.storage.sql import get_engine
 
 logger = logging.getLogger(__name__)
@@ -101,15 +101,15 @@ def update_gdelt() -> None:
 
     if days:
         ingest_days(days, path)
-        
-        
+
+
 def sync_db() -> None:
     settings = load_settings()
     engine = get_engine()
-    
+
     try:
         sync_dashboard(settings.data_dir, engine)
-        
+
     finally:
         engine.dispose()
 
