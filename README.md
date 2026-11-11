@@ -31,9 +31,9 @@ One scheduler container fetches data on a schedule, analysis modules score it, a
 ## Roadmap
 
 - [x] Setup, ingestion, alerts, morning briefing
-- [ ] Story clustering: top stories, coverage lines, blindspots (in progress)
-- [ ] Geopolitical tension index from GDELT
-- [ ] Dashboard (Grafana over Tailscale, desktop and phone layouts), with Discord kept for alerts
+- [x] Story clustering: top stories, coverage lines, blindspots (in progress)
+- [x] Geopolitical tension index from GDELT
+- [x] Dashboard (Grafana over Tailscale, desktop and phone layouts), with Discord kept for alerts
 - [ ] Forecast ledger with scoring, starting with base-rate forecasts
 - [ ] Regime detection (HMM, GARCH)
 - [ ] Drawdown risk model (LightGBM, walk-forward validation, SHAP)
