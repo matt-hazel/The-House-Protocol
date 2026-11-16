@@ -7,10 +7,13 @@ It doesn't predict prices and it doesn't give trade signals. The goal is to flag
 ## What it does today
 
 - **Market data:** daily prices for 27 tickers (Tiingo) and six macro and credit-stress series (FRED), stored as Parquet with idempotent upserts.
-- **Alerts:** watch and alert tiers for VIX, yield curve, credit spreads, drawdown and unusual price moves. Z-score baselines exclude the day being scored. Cooldowns and de-duplication stop repeat pings, and a signal is only recorded as sent once Discord confirms it.
+- **Alerts:** watch and alert tiers for VIX, yield curve, credit spreads, drawdown, unusual price moves and geopolitical tension. Z-score baselines exclude the day being scored. Cooldowns and de-duplication stop repeat pings, and a signal is only recorded as sent once Discord confirms it.
 - **Evening market digest** on Discord after the day's data lands.
-- **Morning briefing** at 7:30 am: local weather, plus headlines from eight outlets across the US and abroad, each labelled with its political lean so the framing is visible.
-- NYSE-calendar-aware scheduling, running in Docker Compose.
+- **Morning briefing** at 7:30 am: local weather, a world-conditions section, top stories, and headlines from eight outlets across the US and abroad, each labelled with its political lean so the framing is visible.
+- **Story clustering:** headlines are grouped by story across outlets (TF-IDF cosine similarity, numpy only), with coverage counts and blindspots where only one side of the spectrum reports a story.
+- **Geopolitical tension index:** daily GDELT event data (three years of history) aggregated for Russia/Ukraine, China/Taiwan and the Middle East, scored against same-weekday baselines.
+- **Dashboard:** Grafana over a Postgres copy of the data (in progress).
+- NYSE-calendar-aware scheduling, running in Docker Compose on a homelab.
 - Automated tests and linting (pytest, ruff).
 
 ## How it works
