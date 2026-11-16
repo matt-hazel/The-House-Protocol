@@ -20,6 +20,8 @@ It doesn't predict prices and it doesn't give trade signals. The goal is to flag
 
 ```
 Tiingo, FRED, RSS feeds, Open-Meteo  ->  Parquet files  ->  rules and analysis  ->  Discord
+|
++-> Postgres -> Grafana
 ```
 
 One scheduler container fetches data on a schedule, analysis modules score it, and results are sent as Discord DMs. Each briefing section has its own fetcher, formatter and tests, so one failing source never blocks the others.
