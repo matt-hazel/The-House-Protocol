@@ -38,7 +38,7 @@ One scheduler container fetches data on a schedule, analysis modules score it, a
 - [x] Setup, ingestion, alerts, morning briefing
 - [x] Story clustering: top stories, coverage lines, blindspots (in progress)
 - [x] Geopolitical tension index from GDELT
-- [x] Dashboard (Grafana over Tailscale, desktop and phone layouts), with Discord kept for alerts
+- [ ] Dashboard (Grafana over Tailscale, desktop and phone layouts), with Discord kept for alerts
 - [ ] Forecast ledger with scoring, starting with base-rate forecasts
 - [ ] Regime detection (HMM, GARCH)
 - [ ] Drawdown risk model (LightGBM, walk-forward validation, SHAP)
@@ -46,15 +46,20 @@ One scheduler container fetches data on a schedule, analysis modules score it, a
 
 ## Running it
 
-1. Copy `.env.example` to `.env` and fill in: `FRED_API_KEY`, `TIINGO_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_USER_ID`, and optionally `WEATHER_LAT`, `WEATHER_LON`, `WEATHER_PLACE`.
-2. Backfill history once, then start the scheduler:
+1. Copy `.env.example` to `.env` and fill in: `FRED_API_KEY`, `TIINGO_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_USER_ID`, `POSTGRES_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, `DATABASE_URL`, and optionally `WEATHER_LAT`, `WEATHER_LON`, `WEATHER_PLACE`.
+2. Backfill history once, then start the stack:
    ```
    python -m house_protocol.ingest.backfill prices
    python -m house_protocol.ingest.backfill macro
+   python -m house_protocol.ingest.backfill_gdelt --years 3
    docker compose up -d --build
    ```
-3. Tests: `pip install -e ".[dev]"` then `pytest`.
+3. Grafana is at 'http://localhost:3000'. On first start, add Postgres ('postgres:5432', database 'house') as a data source.
+4. Tests: `pip install -e ".[dev]"` then `pytest`.
+
+### Deploying to a homelab
+Clone the repo on the server, copy `.env` and `data/` over with `scp` (they are not in git), and run `docker compose up -d --build`. Run it on only one machine, or every briefing and alert is sent twice.
 
 ## Stack
 
-Python 3.12 · pandas · numpy · pyarrow · APScheduler · Docker Compose · Discord API · pytest · ruff
+Python 3.12 · pandas · numpy · pyarrow · SQLAlchemy · APScheduler · Postgres · Grafana · Docker Compose · Discord API · pytest · ruff
