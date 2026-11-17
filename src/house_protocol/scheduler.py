@@ -89,7 +89,8 @@ def update_headlines() -> None:
 
 
 def send_briefing() -> None:
-    run_briefing(load_settings(), datetime.now(NY))
+    now = datetime.now(NY)
+    run_briefing(load_settings(), now, market_day=is_trading_day(now.date()))
 
 
 def update_gdelt() -> None:
