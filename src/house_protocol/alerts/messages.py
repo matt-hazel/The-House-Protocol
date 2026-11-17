@@ -70,3 +70,39 @@ def format_digest(prices: pd.DataFrame, macro: pd.DataFrame, signals: list[Signa
     lines.append(format_signals(signals) if signals else "No watch or alert conditions.")
 
     return "\n".join(lines).strip()
+
+
+
+def format_opener(prices: pd.DataFrame, macro: pd.DataFrame, signals: list[Signal]) -> str:
+    # short pre-open market summary
+    
+    spy = price_series(prices, "SPY")
+    
+    if len(spy) < 2:
+        return ""
+    
+    as_of = spy.index[-1]
+    parts = [f"SPY {returns(spy).iloc[-1]:+.2%}"]
+    
+    
+    for series_id, label in MACRO_LINES:
+        series = macro_series(macro, series_id)
+        
+        if len(series) >= 2:
+            change = series.iloc[-1] - series.iloc[-2]
+            parts.append(f"{label} {series.iloc[-1]:.2f} ({change:+.2f})")
+            
+    lines = [f"**Markets, last close ({as_of:%a %b %d})**", " . ".join(parts)]
+    
+    moves = _day_moves(prices, as_of)
+    
+    
+    if len(moves) >= 6:
+        (drop, down), (gain, up) = moves[0], moves[-1]
+        lines.append(f"Biggest drop: {drop} {down:+.1%}, biggest gain: {gain} {up:+.1%}")
+        
+        
+    lines.append(format_signals(signals) if signals else "No watch or alerts")
+    
+    
+    return "\n".join(lines)
