@@ -7,12 +7,14 @@ import pandas as pd
 import requests
 
 from house_protocol.alerts.discord import send_dm
-from house_protocol.alerts.rules import tension_readings
+from house_protocol.alerts.rules import tension_readings, evaluate
+from house_protocol.alerts.messages import format_opener
 from house_protocol.briefing.cluster import find_clusters, summarize
 from house_protocol.briefing.sources import FEEDS, Feed
 from house_protocol.briefing.weather import get_weather_text
 from house_protocol.config import Settings
 from house_protocol.storage.parquet import read_table
+
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +99,7 @@ def build_briefing(
         s
         for s in (
             weather,
+            markets,
             world,
             format_top_stories(headlines, now, feeds),
             format_headlines(headlines, now, feeds),
@@ -111,8 +114,8 @@ def build_briefing(
 
 
 def run_briefing(
-    settings: Settings, now: datetime, session: requests.Session | None = None
-) -> None:
+    settings: Settings, now: datetime, session: requests.Session, market_day: bool = True | None = None
+ ) -> None:
     # send todays briefing
 
     if not (settings.discord_bot_token and settings.discord_user_id):
@@ -128,9 +131,19 @@ def run_briefing(
         logger.info("briefing already sent for %s", today)
 
         return
+    
+    markets = ""
+        
+    if market_day:
+        try:
+            markets = market_opener(settings, gdelt)
+    
+        except Exception:
+            # broken markets section must not block weather/headlines
+            logger.exception("market section failed, skip")
 
     headlines = read_table(settings.data_dir / "headlines.parquet")
-    text = build_briefing(settings, headlines, now, session, gdelt=gdelt)
+    text = build_briefing(settings, headlines, now, session, gdelt=gdelt, markets=markets)
 
     if not text:
         logger.warning("briefing has no content, skipping")
@@ -163,3 +176,19 @@ def format_world(gdelt: pd.DataFrame) -> str:
     )
 
     return "\n".join(lines)
+
+
+
+def market_opener(settings: Settings, gdelt: pd.DataFrame) -> str:
+    # last close summary
+    
+    prices = read_table(settings.data_dir / "prices.parquet")
+    macro = read_table(settings.data_dir / "macro.parquet")
+    
+    if prices.empty or macro.empty:
+        return ""
+    
+    
+    return format_opener(prices, macro, evaluate(prices, macro, gdelt))
+
+
