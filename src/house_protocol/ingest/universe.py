@@ -25,6 +25,7 @@ EQUITY_SYMBOLS: list[str] = [
     "JPM",
     "XOM",
     "CAT",
+    "ANT",
     # nuclear
     "URA",
     "URNM",
