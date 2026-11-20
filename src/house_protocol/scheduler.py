@@ -2,7 +2,6 @@ import logging
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import holidays
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -15,23 +14,18 @@ from house_protocol.ingest.fred import ingest_macro
 from house_protocol.ingest.gdelt import ingest_days, missing_days
 from house_protocol.ingest.tiingo import ingest_prices
 from house_protocol.ingest.universe import EQUITY_SYMBOLS, FRED_SERIES
+from house_protocol.market_calendar import is_trading_day
 from house_protocol.storage.dashboard import sync_dashboard
 from house_protocol.storage.parquet import read_table
 from house_protocol.storage.sql import get_engine
 
 logger = logging.getLogger(__name__)
 NY = ZoneInfo("America/New_York")
-NYSE_HOLIDAYS = holidays.NYSE()
 LOOKBACK_DAYS = 10
 
 
 def heartbeat() -> None:
     logger.info("alive mi amigo")
-
-
-def is_trading_day(d: date) -> bool:
-    """True only weekdays that are not NYSE holidays"""
-    return d.weekday() < 5 and d not in NYSE_HOLIDAYS
 
 
 def latest_date(path, symbol: str) -> date | None:
