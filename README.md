@@ -38,7 +38,7 @@ One scheduler container fetches data on a schedule, analysis modules score it, a
 - [x] Setup, ingestion, alerts, morning briefing
 - [x] Story clustering: top stories, coverage lines, blindspots (in progress)
 - [x] Geopolitical tension index from GDELT
-- [ ] Dashboard (Grafana over Tailscale, desktop and phone layouts), with Discord kept for alerts
+- [x] Dashboard (Grafana over Tailscale, desktop and phone layouts), with Discord kept for alerts
 - [ ] Change weather location without editing `.env`: by Discord DM command (`!location Boston`  via Open-Meteo geocoding) and/or from the dashboard
 - [ ] Forecast ledger with scoring, starting with base-rate forecasts
 - [ ] Regime detection (HMM, GARCH)
