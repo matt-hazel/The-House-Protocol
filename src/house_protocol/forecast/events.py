@@ -15,6 +15,10 @@ from house_protocol.alerts.rules import (
 )
 
 
+DRAWDOWN_EDGES = (0.02, 0.04, 0.07)
+VIX_EDGES = (15, 20, 25)
+
+
 def drawdown_series(prices: pd.DataFrame) -> pd.Series:
     # SPY distance below its 52 week high
     spy = price_series(prices, "SPY")
@@ -56,7 +60,14 @@ class Event:
     track: str
     horizon_days: int
     question: str
-    outcome: Callable[[pd.DataFrame, pd.DataFrame, date, date], int | None]
+    series: Callable[[pd.DataFrame, pd.DataFrame], pd.Series]
+    level: float
+    edges: tuple[float, ...]
+    
+    def outcome(
+        self, prices: pd.DataFrame, macro: pd.DataFrame, issued_on: date, resolves_on: date
+    ) -> int | None:
+        return reached(self.series(prices, macro), self.level, issued_on, resolves_on)
 
 
 EVENTS = {
@@ -64,12 +75,16 @@ EVENTS = {
         track="spy_drawdown",
         horizon_days=21,
         question="Will SPY close 7% or more below its 52 week high in next 21 days?",
-        outcome=spy_drawdown_outcome,
+        series=lambda prices, macro: drawdown_series(prices),
+        level=DRAWDOWN_LEVELS[0],
+        edges=DRAWDOWN_EDGES,
     ),
     "vix_stress": Event(
         track="vix_stress",
         horizon_days=10,
         question="Will the VIX close at or above 25 on any day in the next 10 trading days?",
-        outcome=vix_stress_outcome,
+        series=lambda prices, macro: vix_series(macro),
+        level=VIX_LEVELS[0],
+        edges=VIX_EDGES,
     ),
 }

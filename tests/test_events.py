@@ -6,6 +6,9 @@ from house_protocol.forecast import events
 
 EMPTY = pd.DataFrame()
 
+SPY = events.EVENTS["spy_drawdown"]
+VIX = events.EVENTS["vix_stress"]
+
 
 def spy_prices(closes):
     days = pd.bdate_range("2026-01-05", periods=len(closes))
