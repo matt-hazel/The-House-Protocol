@@ -49,7 +49,6 @@ services:
     volumes:
       - ./grafana:/var/lib/grafana
       - ./dashboard/provisioning:/etc/grafana/provisioning:ro
-      - ./dashboard/dashboards:/var/lib/grafana-dashboards:ro
     ports:
       - "3000:3000"
     mem_limit: 384m
