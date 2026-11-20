@@ -14,7 +14,6 @@ from house_protocol.alerts.rules import (
     price_series,
 )
 
-
 DRAWDOWN_EDGES = (0.02, 0.04, 0.07)
 VIX_EDGES = (15, 20, 25)
 
@@ -63,7 +62,7 @@ class Event:
     series: Callable[[pd.DataFrame, pd.DataFrame], pd.Series]
     level: float
     edges: tuple[float, ...]
-    
+
     def outcome(
         self, prices: pd.DataFrame, macro: pd.DataFrame, issued_on: date, resolves_on: date
     ) -> int | None:
