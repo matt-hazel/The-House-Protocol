@@ -18,6 +18,7 @@ from house_protocol.market_calendar import is_trading_day
 from house_protocol.storage.dashboard import sync_dashboard
 from house_protocol.storage.parquet import read_table
 from house_protocol.storage.sql import get_engine
+from house_protocol.forecast.runner import run_forecasts
 
 logger = logging.getLogger(__name__)
 NY = ZoneInfo("America/New_York")
@@ -96,6 +97,10 @@ def update_gdelt() -> None:
 
     if days:
         ingest_days(days, path)
+        
+        
+def update_forecasts() -> None:
+    run_forecasts(load_settings().data_dir, datetime.now(NY).date())
 
 
 def sync_db() -> None:
@@ -136,6 +141,11 @@ def main() -> None:
     )
     scheduler.add_job(update_gdelt, CronTrigger(hour="3-6", minute=15, timezone=NY))
     scheduler.add_job(sync_db, CronTrigger(minute="20,50", timezone=NY))
+    scheduler.add_job(
+        update_forecasts,
+        CronTrigger(day_of_week="mon-fri", hour=15, minute=45, timezone=NY),
+        misfire_grace_time=3600,
+    )
 
     scheduler.start()
 
