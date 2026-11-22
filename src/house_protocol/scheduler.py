@@ -10,6 +10,7 @@ from house_protocol.briefing.headlines import ingest_headlines
 from house_protocol.briefing.morning import run_briefing
 from house_protocol.briefing.sources import FEEDS
 from house_protocol.config import load_settings
+from house_protocol.forecast.runner import run_forecasts
 from house_protocol.ingest.fred import ingest_macro
 from house_protocol.ingest.gdelt import ingest_days, missing_days
 from house_protocol.ingest.tiingo import ingest_prices
@@ -18,7 +19,6 @@ from house_protocol.market_calendar import is_trading_day
 from house_protocol.storage.dashboard import sync_dashboard
 from house_protocol.storage.parquet import read_table
 from house_protocol.storage.sql import get_engine
-from house_protocol.forecast.runner import run_forecasts
 
 logger = logging.getLogger(__name__)
 NY = ZoneInfo("America/New_York")
@@ -97,8 +97,8 @@ def update_gdelt() -> None:
 
     if days:
         ingest_days(days, path)
-        
-        
+
+
 def update_forecasts() -> None:
     run_forecasts(load_settings().data_dir, datetime.now(NY).date())
 
