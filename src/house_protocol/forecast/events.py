@@ -75,7 +75,7 @@ EVENTS = {
         horizon_days=21,
         question="Will SPY close 7% or more below its 52 week high in next 21 days?",
         series=lambda prices, macro: drawdown_series(prices),
-        level=DRAWDOWN_LEVELS[0],
+        level=DRAWDOWN_LEVELS[1],
         edges=DRAWDOWN_EDGES,
     ),
     "vix_stress": Event(
@@ -83,7 +83,7 @@ EVENTS = {
         horizon_days=10,
         question="Will the VIX close at or above 25 on any day in the next 10 trading days?",
         series=lambda prices, macro: vix_series(macro),
-        level=VIX_LEVELS[0],
+        level=VIX_LEVELS[1],
         edges=VIX_EDGES,
     ),
 }
