@@ -62,4 +62,9 @@ def current_state(event: Event, series: pd.Series, as_of: date) -> int | None:
     if when not in series.index:
         return None
 
-    return bisect_right(event.edges, series.loc[when])
+    value = series.loc[when]
+    
+    if value >= event.level:
+        return None
+
+    return bisect_right(event.edges, value)
