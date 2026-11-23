@@ -25,6 +25,11 @@ def history_labels(event: Event, prices: pd.DataFrame, macro: pd.DataFrame) -> p
 
         if outcome is None or issued not in series.index:
             continue
+        
+        value = series.loc[issued]
+        
+        if value >= event.level:
+            continue
 
         rows.append(
             {
