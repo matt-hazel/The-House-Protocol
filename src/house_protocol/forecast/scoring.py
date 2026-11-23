@@ -15,7 +15,7 @@ def _resolved(ledger: pd.DataFrame, kind: str) -> pd.DataFrame:
     return done
 
 
-def score(ledger: pd.DataFrame, kind: str) -> pd.DataFrame:
+def scorecard(ledger: pd.DataFrame, kind: str) -> pd.DataFrame:
     # one row per track and model: brier score and skill against clima.
 
     done = _resolved(ledger, kind)
