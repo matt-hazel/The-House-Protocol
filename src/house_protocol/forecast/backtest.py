@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from house_protocol.config import load_settings
 from house_protocol.forecast import baselines, ledger
 from house_protocol.forecast.events import EVENTS, Event
 from house_protocol.storage.parquet import read_table
@@ -68,3 +69,8 @@ def run_backtest(data_dir: Path, min_history: int = MIN_HISTORY) -> None:
 
     ledger.save_ledger(table, path)
     logger.info("backtest: %d new rows, %d total", len(table) - before, len(table))
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level="INFO")
+    run_backtest(load_settings().data_dir)
