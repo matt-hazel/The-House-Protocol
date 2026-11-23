@@ -19,6 +19,7 @@ TABLES = {
     "headlines.parquet": "headlines",
     "gdelt_daily.parquet": "gdelt_daily",
     "alert_log.parquet": "alert_log",
+    "forecasts.parquet": "forecasts",
 }
 
 
