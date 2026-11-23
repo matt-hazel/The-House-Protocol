@@ -15,11 +15,7 @@ logger = logging.getLogger(__name__)
 MIN_HISTORY = 500
 
 
-def backtest_rows(
-    event: Event, 
-    labels: pd.DataFrame, 
-    min_history: int = MIN_HISTORY
-    ) -> list[dict]:
+def backtest_rows(event: Event, labels: pd.DataFrame, min_history: int = MIN_HISTORY) -> list[dict]:
     # one row per model per past issue date
 
     rows = []
