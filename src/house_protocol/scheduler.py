@@ -19,6 +19,7 @@ from house_protocol.market_calendar import is_trading_day
 from house_protocol.storage.dashboard import sync_dashboard
 from house_protocol.storage.parquet import read_table
 from house_protocol.storage.sql import get_engine
+from house_protocol.forecast.report import run_scorecard
 
 logger = logging.getLogger(__name__)
 NY = ZoneInfo("America/New_York")
@@ -112,6 +113,11 @@ def sync_db() -> None:
 
     finally:
         engine.dispose()
+        
+        
+        
+def send_scorecard() -> None:
+    run_scorecard(load_settings())
 
 
 # THIS IS MAIN
@@ -144,6 +150,11 @@ def main() -> None:
     scheduler.add_job(
         update_forecasts,
         CronTrigger(day_of_week="mon-fri", hour=15, minute=45, timezone=NY),
+        misfire_grace_time=3600,
+    )
+    scheduler.add_job(
+        send_scorecard,
+        CronTrigger(day_of_week="sun", hour=10, minute=0, timezone=NY),
         misfire_grace_time=3600,
     )
 
