@@ -22,7 +22,7 @@ def _open_lines(ledger: pd.DataFrame) -> list[str]:
     for track, rows in live.groupby("track"):
         latest = rows.loc[rows["issued_on"] == rows["issued_on"].max()]
         by_model = latest.set_index("model")["probability"]
-        resolves = latest["resolves_on"].iloc[0].strftime("&b &d")
+        resolves = latest["resolves_on"].iloc[0].strftime("%b %d")
 
         lines.append(EVENTS[track].question)
         lines.append(
