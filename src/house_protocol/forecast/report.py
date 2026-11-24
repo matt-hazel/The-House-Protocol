@@ -68,7 +68,7 @@ def run_scorecard(settings: Settings) -> None:
         logger.warning("Discord credentials not set, skip score")
         return
 
-    ledger = load_ledger(settings.data_dir) / "forecasts.parquet"
+    ledger = load_ledger(settings.data_dir / "forecasts.parquet")
 
     if ledger.empty:
         logger.info("no forecasts, skip")
