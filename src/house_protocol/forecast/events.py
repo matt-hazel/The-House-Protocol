@@ -16,6 +16,8 @@ from house_protocol.alerts.rules import (
 
 DRAWDOWN_EDGES = (0.02, 0.04, 0.07)
 VIX_EDGES = (15, 20, 25)
+DRAWDOWN_SEVERE_EDGES = (0.04, 0.07, 0.10)
+VIX_CRISIS_EDGES = (20, 25, 28)
 
 
 def drawdown_series(prices: pd.DataFrame) -> pd.Series:
@@ -75,7 +77,7 @@ EVENTS = {
         horizon_days=21,
         question="Will SPY close 7% or more below its 52 week high in next 21 days?",
         series=lambda prices, macro: drawdown_series(prices),
-        level=DRAWDOWN_LEVELS[1],
+        level=DRAWDOWN_LEVELS[0],
         edges=DRAWDOWN_EDGES,
     ),
     "vix_stress": Event(
@@ -83,7 +85,23 @@ EVENTS = {
         horizon_days=10,
         question="Will the VIX close at or above 25 on any day in the next 10 trading days?",
         series=lambda prices, macro: vix_series(macro),
-        level=VIX_LEVELS[1],
+        level=VIX_LEVELS[0],
         edges=VIX_EDGES,
+    ),
+    "spy_drawdown_severe": Event(
+        track="spy_drawdown_severe",
+        horizon_days=21,
+        question="Will SPY close 12% or more below its 52 week high in 21 days?",
+        series=lambda prices, macro: drawdown_series(prices),
+        level=DRAWDOWN_LEVELS[1],
+        edges=DRAWDOWN_SEVERE_EDGES,
+    ),
+    "vix_crisis": Event(
+        track="vix_crisis",
+        horizon_days=10,
+        question="Will the VIX close at or above 30 on any day in 10 days?",
+        series=lambda prices, macro: vix_series(macro),
+        level=VIX_LEVELS[1],
+        edges=VIX_CRISIS_EDGES,
     ),
 }
